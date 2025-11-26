@@ -31,9 +31,11 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    is_doctor: bool = False
 
 class User(UserBase):
     id: int
+    is_doctor: bool = False
     
     class Config:
         orm_mode = True
