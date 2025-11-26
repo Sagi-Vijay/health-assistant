@@ -141,3 +141,24 @@ elif page == "Symptom Analysis":
                     st.error(f"Connection Error: {e}")
         else:
             st.warning("Please enter your symptoms.")
+
+elif page == "History":
+    st.header("Your Medical History")
+    
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        res = requests.get(f"{API_URL}/history", headers=headers)
+        
+        if res.status_code == 200:
+            interactions = res.json()
+            if not interactions:
+                st.info("No history found.")
+            else:
+                for item in interactions:
+                    with st.expander(f"{item['timestamp']} - {item['user_query'][:50]}..."):
+                        st.markdown(f"**Query:** {item['user_query']}")
+                        st.markdown(f"**AI Response:** {item['llm_response']}")
+        else:
+            st.error("Failed to fetch history.")
+    except Exception as e:
+        st.error(f"Error: {e}")
