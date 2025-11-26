@@ -85,9 +85,11 @@ if page == "Chat":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
+                    headers = {"Authorization": f"Bearer {st.session_state.token}"}
                     response = requests.post(
                         f"{API_URL}/chat", 
-                        json={"session_id": "streamlit_user", "message": prompt}
+                        json={"session_id": "streamlit_user", "message": prompt},
+                        headers=headers
                     )
                     if response.status_code == 200:
                         data = response.json()
@@ -108,10 +110,12 @@ elif page == "Symptom Analysis":
         if user_input:
             with st.spinner("Analyzing symptoms..."):
                 try:
+                    headers = {"Authorization": f"Bearer {st.session_state.token}"}
                     # 1. Analyze Symptoms
                     analysis_res = requests.post(
                         f"{API_URL}/analyze_symptoms",
-                        json={"user_input": user_input}
+                        json={"user_input": user_input},
+                        headers=headers
                     )
                     
                     if analysis_res.status_code == 200:
@@ -123,7 +127,8 @@ elif page == "Symptom Analysis":
                         st.subheader("Possible Conditions (AI Generated)")
                         diag_res = requests.post(
                             f"{API_URL}/diagnose",
-                            json={"user_input": user_input}
+                            json={"user_input": user_input},
+                            headers=headers
                         )
                         if diag_res.status_code == 200:
                             diag_data = diag_res.json()
