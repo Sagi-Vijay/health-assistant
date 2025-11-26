@@ -110,7 +110,8 @@ async def diagnose(request: SymptomAnalysisRequest, db: Session = Depends(get_db
         interaction = Interaction(
             session_id="test_session", # In real app, get from auth/header
             user_query=request.user_input,
-            llm_response=response
+            llm_response=response,
+            user_id=current_user.id
         )
         db.add(interaction)
         db.commit()
@@ -131,7 +132,8 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db), current_user
         interaction = Interaction(
             session_id=request.session_id,
             user_query=request.message,
-            llm_response=response
+            llm_response=response,
+            user_id=current_user.id
         )
         db.add(interaction)
         db.commit()
