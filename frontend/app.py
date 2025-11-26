@@ -13,9 +13,54 @@ st.markdown("""
 Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
 """)
 
+# Session state for auth
+if "token" not in st.session_state:
+    st.session_state.token = None
+
 # Sidebar
 st.sidebar.header("Navigation")
-page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis"])
+
+if not st.session_state.token:
+    st.sidebar.warning("Please Log In")
+    auth_mode = st.sidebar.radio("Auth", ["Login", "Signup"])
+    
+    if auth_mode == "Login":
+        st.header("Login")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            try:
+                res = requests.post(f"{API_URL}/token", data={"username": username, "password": password})
+                if res.status_code == 200:
+                    st.session_state.token = res.json()["access_token"]
+                    st.success("Logged in!")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
+            except Exception as e:
+                st.error(f"Error: {e}")
+                
+    elif auth_mode == "Signup":
+        st.header("Signup")
+        new_user = st.text_input("Username")
+        new_pass = st.text_input("Password", type="password")
+        if st.button("Signup"):
+            try:
+                res = requests.post(f"{API_URL}/signup", json={"username": new_user, "password": new_pass})
+                if res.status_code == 200:
+                    st.success("Account created! Please log in.")
+                else:
+                    st.error(f"Error: {res.text}")
+            except Exception as e:
+                st.error(f"Error: {e}")
+    
+    st.stop() # Stop execution if not logged in
+
+if st.sidebar.button("Logout"):
+    st.session_state.token = None
+    st.rerun()
+
+page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "History"])
 
 if page == "Chat":
     st.header("Medical Chat Assistant")
