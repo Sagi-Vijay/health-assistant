@@ -60,7 +60,7 @@ if st.sidebar.button("Logout"):
     st.session_state.token = None
     st.rerun()
 
-page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "History"])
+page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "Report Analysis", "History"])
 
 if page == "Chat":
     st.header("Medical Chat Assistant")
@@ -162,3 +162,27 @@ elif page == "History":
             st.error("Failed to fetch history.")
     except Exception as e:
         st.error(f"Error: {e}")
+
+elif page == "Report Analysis":
+    st.header("Medical Report Analysis")
+    st.markdown("Upload a PDF medical report (e.g., lab results) for AI analysis.")
+    
+    uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+    
+    if uploaded_file is not None:
+        if st.button("Analyze Report"):
+            with st.spinner("Processing and analyzing report..."):
+                try:
+                    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                    files = {"file": (uploaded_file.name, uploaded_file, "application/pdf")}
+                    
+                    res = requests.post(f"{API_URL}/upload_report", headers=headers, files=files)
+                    
+                    if res.status_code == 200:
+                        data = res.json()
+                        st.subheader("Analysis Result")
+                        st.markdown(data["analysis"])
+                    else:
+                        st.error(f"Error: {res.status_code} - {res.text}")
+                except Exception as e:
+                    st.error(f"Connection Error: {e}")
