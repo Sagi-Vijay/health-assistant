@@ -1,11 +1,13 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends, status
+import shutil
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from backend.models import SymptomAnalysisRequest, SymptomAnalysisResponse, ChatRequest, ChatResponse, UserCreate, User, Token, InteractionLog
 from backend.rag_pipeline import initialize_rag_pipeline, get_retriever
 from backend.chains import get_symptom_chain, get_diagnosis_chain, get_chat_chain
 from backend.database import init_db, get_db, Interaction, User as DBUser
 from backend.auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from backend.document_processor import process_pdf
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import List
@@ -151,3 +153,25 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db), current_user
 def get_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     interactions = db.query(Interaction).filter(Interaction.user_id == current_user.id).all()
     return interactions
+
+@app.post("/upload_report")
+async def upload_report(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    try:
+        # Save file temporarily
+        file_location = f"temp_{file.filename}"
+        with open(file_location, "wb+") as file_object:
+            shutil.copyfileobj(file.file, file_object)
+            
+        # Process PDF
+        retriever = process_pdf(file_location)
+        
+        # Analyze with RAG (using Diagnosis Chain for now as a generic analyzer)
+        chain = get_diagnosis_chain(retriever)
+        response = chain.run("Analyze this medical report and summarize key findings.")
+        
+        # Cleanup
+        os.remove(file_location)
+        
+        return {"analysis": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
