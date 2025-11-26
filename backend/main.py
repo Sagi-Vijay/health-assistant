@@ -50,6 +50,19 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
+@app.post("/signup_doctor", response_model=User)
+def signup_doctor(user: UserCreate, db: Session = Depends(get_db)):
+    # Secret key or admin check should be here in real app
+    db_user = db.query(DBUser).filter(DBUser.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    hashed_password = get_password_hash(user.password)
+    new_user = DBUser(username=user.username, hashed_password=hashed_password, is_doctor=True)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(DBUser).filter(DBUser.username == form_data.username).first()
@@ -153,6 +166,13 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db), current_user
 @app.get("/history", response_model=List[InteractionLog])
 def get_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     interactions = db.query(Interaction).filter(Interaction.user_id == current_user.id).all()
+    return interactions
+
+@app.get("/doctor/patients", response_model=List[InteractionLog])
+def get_all_patients(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not current_user.is_doctor:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    interactions = db.query(Interaction).all()
     return interactions
 
 @app.post("/upload_report")

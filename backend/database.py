@@ -18,6 +18,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    is_doctor = Column(Integer, default=0) # 0 for patient, 1 for doctor
+
+class Interaction(Base):
 
 class Interaction(Base):
     __tablename__ = "interactions"

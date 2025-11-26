@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+langchain
+langchain-google-genai
+langchain-community
+faiss-cpu
+sentence-transformers
+pydantic
+sqlalchemy
+python-multipart
+streamlit
+requests
+python-jose[cryptography]
+passlib[bcrypt]
+pypdf
+google-generativeai
+python-dotenv

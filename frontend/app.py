@@ -60,7 +60,7 @@ if st.sidebar.button("Logout"):
     st.session_state.token = None
     st.rerun()
 
-page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "Report Analysis", "Voice Assistant", "History"])
+page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "Report Analysis", "Voice Assistant", "History", "Doctor Dashboard"])
 
 if page == "Chat":
     st.header("Medical Chat Assistant")
@@ -187,6 +187,24 @@ elif page == "Voice Assistant":
                         st.error(f"Error: {res.status_code} - {res.text}")
                 except Exception as e:
                     st.error(f"Connection Error: {e}")
+
+elif page == "Doctor Dashboard":
+    st.header("Doctor Dashboard")
+    st.markdown("View patient interactions and summaries.")
+    
+    try:
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        res = requests.get(f"{API_URL}/doctor/patients", headers=headers)
+        
+        if res.status_code == 200:
+            interactions = res.json()
+            st.dataframe(interactions)
+        elif res.status_code == 403:
+            st.error("Access Denied: You are not a doctor.")
+        else:
+            st.error("Failed to fetch data.")
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 elif page == "Report Analysis":
     st.header("Medical Report Analysis")
