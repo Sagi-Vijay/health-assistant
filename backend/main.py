@@ -1,13 +1,65 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends
-from backend.models import SymptomAnalysisRequest, SymptomAnalysisResponse, ChatRequest, ChatResponse
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from backend.models import SymptomAnalysisRequest, SymptomAnalysisResponse, ChatRequest, ChatResponse, UserCreate, User, Token
 from backend.rag_pipeline import initialize_rag_pipeline, get_retriever
 from backend.chains import get_symptom_chain, get_diagnosis_chain, get_chat_chain
-from backend.database import init_db, get_db, Interaction
+from backend.database import init_db, get_db, Interaction, User as DBUser
+from backend.auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from sqlalchemy.orm import Session
+from datetime import timedelta
 import json
 
 app = FastAPI(title="Health Assistant AI")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    from jose import JWTError, jwt
+    from backend.auth import SECRET_KEY, ALGORITHM
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = db.query(DBUser).filter(DBUser.username == username).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+@app.post("/signup", response_model=User)
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(DBUser).filter(DBUser.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    hashed_password = get_password_hash(user.password)
+    new_user = DBUser(username=user.username, hashed_password=hashed_password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(DBUser).filter(DBUser.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # Initialize RAG and DB on startup
 @app.on_event("startup")
