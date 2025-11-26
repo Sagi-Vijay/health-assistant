@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./health_assistant.db"
@@ -27,6 +27,11 @@ class Interaction(Base):
     user_query = Column(Text)
     llm_response = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    owner = relationship("User", back_populates="interactions")
+
+User.interactions = relationship("Interaction", back_populates="owner")
 
 def init_db():
     Base.metadata.create_all(bind=engine)
