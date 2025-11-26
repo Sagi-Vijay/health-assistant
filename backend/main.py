@@ -77,7 +77,7 @@ async def root():
     return {"message": "Health Assistant AI API is running"}
 
 @app.post("/analyze_symptoms", response_model=SymptomAnalysisResponse)
-async def analyze_symptoms(request: SymptomAnalysisRequest):
+async def analyze_symptoms(request: SymptomAnalysisRequest, current_user: User = Depends(get_current_user)):
     try:
         chain = get_symptom_chain()
         result = chain.run(request.user_input)
@@ -91,7 +91,7 @@ async def analyze_symptoms(request: SymptomAnalysisRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/diagnose")
-async def diagnose(request: SymptomAnalysisRequest, db: Session = Depends(get_db)):
+async def diagnose(request: SymptomAnalysisRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         # 1. Extract symptoms first (optional, but good for structured input)
         # For now, we just use the raw input as "symptoms" for the RAG chain
@@ -120,7 +120,7 @@ async def diagnose(request: SymptomAnalysisRequest, db: Session = Depends(get_db
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         retriever = get_retriever()
         chain = get_chat_chain(retriever)
