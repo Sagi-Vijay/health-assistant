@@ -60,7 +60,7 @@ if st.sidebar.button("Logout"):
     st.session_state.token = None
     st.rerun()
 
-page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "Report Analysis", "History"])
+page = st.sidebar.radio("Go to", ["Chat", "Symptom Analysis", "Report Analysis", "Voice Assistant", "History"])
 
 if page == "Chat":
     st.header("Medical Chat Assistant")
@@ -162,6 +162,31 @@ elif page == "History":
             st.error("Failed to fetch history.")
     except Exception as e:
         st.error(f"Error: {e}")
+
+elif page == "Voice Assistant":
+    st.header("Voice Health Assistant")
+    st.markdown("Upload an audio recording of your symptoms or questions.")
+    
+    uploaded_audio = st.file_uploader("Choose an audio file", type=["mp3", "wav", "m4a"])
+    
+    if uploaded_audio is not None:
+        st.audio(uploaded_audio)
+        if st.button("Analyze Audio"):
+            with st.spinner("Listening and analyzing..."):
+                try:
+                    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+                    files = {"file": (uploaded_audio.name, uploaded_audio, "audio/mpeg")}
+                    
+                    res = requests.post(f"{API_URL}/analyze_audio", headers=headers, files=files)
+                    
+                    if res.status_code == 200:
+                        data = res.json()
+                        st.subheader("AI Response")
+                        st.markdown(data["analysis"])
+                    else:
+                        st.error(f"Error: {res.status_code} - {res.text}")
+                except Exception as e:
+                    st.error(f"Connection Error: {e}")
 
 elif page == "Report Analysis":
     st.header("Medical Report Analysis")
