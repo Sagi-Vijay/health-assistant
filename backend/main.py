@@ -8,6 +8,7 @@ from backend.chains import get_symptom_chain, get_diagnosis_chain, get_chat_chai
 from backend.database import init_db, get_db, Interaction, User as DBUser
 from backend.auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from backend.document_processor import process_pdf
+from backend.audio_processor import analyze_audio_file
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import List
@@ -168,6 +169,24 @@ async def upload_report(file: UploadFile = File(...), current_user: User = Depen
         # Analyze with RAG (using Diagnosis Chain for now as a generic analyzer)
         chain = get_diagnosis_chain(retriever)
         response = chain.run("Analyze this medical report and summarize key findings.")
+        
+        # Cleanup
+        os.remove(file_location)
+        
+        return {"analysis": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/analyze_audio")
+async def analyze_audio(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    try:
+        # Save file temporarily
+        file_location = f"temp_{file.filename}"
+        with open(file_location, "wb+") as file_object:
+            shutil.copyfileobj(file.file, file_object)
+            
+        # Analyze Audio
+        response = analyze_audio_file(file_location)
         
         # Cleanup
         os.remove(file_location)
